@@ -24,6 +24,7 @@ deviceListObj = ""
 voiceSoc = ""
 deviceSoc = ""
 audioStream = ""
+voiceStream = ""
 
 LOGGER = getLogger(__name__)
 
@@ -44,8 +45,11 @@ class IntercomSkill(MycroftSkill):
         self.gui.register_handler('IntercomSkill.handleSpeakStop',
                                   self.speakStop)
         self.scanLocal()
+        self.createPlayer()
         self.voiceServerT = threading.Thread(target=self.voiceServer)
         self.voiceServerT.start()
+        self.client = ""
+        self.speaking = False
 
     @intent_handler(IntentBuilder('handle_display_intercom_skill').require('intercom.show.devices'))
     def handle_display_intercom_skill(self, message):
@@ -100,41 +104,52 @@ class IntercomSkill(MycroftSkill):
                 client.send(deviceName.encode("utf-8"))
         
         client.close()
+    
+    #Create AudioPlayer
+    def createPlayer(self):
+        paudio = pyaudio.PyAudio()
+        global voiceStream
+        voiceStream = paudio.open(format = pyaudio.paInt16,
+                        channels = 1,
+                        rate = 10240,
+                        output = True)
 
     # Start Voice Server
     def voiceServer(self):
         currentPath = dirname(__file__)
         sys.path.append(currentPath) 
         import nmscanner as nm
-        chunk = 1024
-        paudio = pyaudio.PyAudio()
-        voiceStream = paudio.open(format = pyaudio.paInt16,
-                        channels = 1,
-                        rate = 10240,
-                        output = True)
         host = nm.get_own_ip()
         port = 50005
-        backlog = 4
-        size = 1024
+
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind((host,port))
-        sock.listen(backlog)
-        client, address = sock.accept()
-        print('Connected by', address)
+        sock.listen(5)
         while 1:
+            conn, address = sock.accept()
+            new_client = threading.Thread(target=self.clientThread, args=(conn,))
+            new_client.start()
+            
+        sock.close 
+        
+    def clientThread(self, conn):
+        message = "In ClientThread \n"
+        conn.send(message.encode())
+        
+        while True:
+            data = conn.recv(1024)
             if data:
-                data = client.recv(size)
-            try: 
-                voiceStream.write(data)  # Stream the recieved audio data
-                client.send('ACK'.encode("utf-8"))  # Send an ACK
-            except:
-                print ("cannot recieve data")
+                self.streamAudio(data)
+            else:
                 break
+        
+        conn.close()
 
-        client.close()
-        stream.close()
-        paudio.terminate()
-
+    def streamAudio(self, data):
+        global voiceStream
+        if data:
+            voiceStream.write(data)
+        
     # Connect Voice Client
     def connectVoiceClient(self):
         LOGGER.info ("In vConnect")
@@ -166,12 +181,9 @@ class IntercomSkill(MycroftSkill):
         LOGGER.info("In vDisconnect Start")
         global voiceSoc
         voiceSoc.close()
-        self.voiceServerT.terminate();
         LOGGER.info("In vDisconnect Completed")
     
     def speakStart(self):
-        #t = threading.Thread(target=speak)
-        #t.start()
         global mute
         mute = False
         self.speak()
@@ -191,7 +203,6 @@ class IntercomSkill(MycroftSkill):
         while mute is False:
             data = audioStream.read(chunk)  
             voiceSoc.send(data)
-            voiceSoc.recv(size)
 
     def stop(self):
         """

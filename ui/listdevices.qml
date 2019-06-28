@@ -72,15 +72,25 @@ Mycroft.ScrollableDelegate {
                             text: "Speak"
                             enabled: true
                             
-                            onPressed: {
+                            onClicked: {
                                 triggerGuiEvent("IntercomSkill.handleSpeakStart", {})
                                 console.log("inSpeakStart")
                             }
-                            onReleased: {
+                        }
+                        
+                        Button {
+                            Layout.alignment: Qt.AlignRight
+                            Layout.fillHeight: true
+                            Layout.preferredWidth: paintedWidth
+                            text: "Stop Speak"
+                            enabled: true
+                            
+                            onClicked: {
                                 triggerGuiEvent("IntercomSkill.handleSpeakStop", {})
                                 console.log("inSpeakStop")
                             }
                         }
+                        
                         Button {
                             Layout.alignment: Qt.AlignRight
                             Layout.fillHeight: true
