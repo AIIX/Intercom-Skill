@@ -44,37 +44,32 @@ class IntercomSkill(MycroftSkill):
                                   self.speakStart)
         self.gui.register_handler('IntercomSkill.handleSpeakStop',
                                   self.speakStop)
-        self.scanLocal()
+        self.platform = self.config_core["enclosure"]["platform"]
         self.createPlayer()
         self.voiceServerT = threading.Thread(target=self.voiceServer)
         self.voiceServerT.start()
-        self.client = ""
-        self.speaking = False
-
+        self.deviceServerT = Process(target=self.deviceServer)
+        self.deviceServerT.start()
+        self.scanLocal()
+        
     @intent_handler(IntentBuilder('handle_display_intercom_skill').require('intercom.show.devices'))
     def handle_display_intercom_skill(self, message):
-        self.scanLocal()
         global deviceListObj
         self.gui["deviceScan"] = json.dumps(deviceListObj)
-        self.gui.show_page("listdevices.qml", override_idle=True)
+        self.gui["pageState"] = "Scan"   
+        self.gui.show_page("intercomLoader.qml", override_idle=True)
 
     # Scan Network For Valid Devices
     def scanLocal(self):
-        deviceServerT = Process(target=self.deviceServer)
-        deviceServerT.start()
         currentPath = dirname(__file__)
         sys.path.append(currentPath) 
         import nmscanner as nm
         deviceList = nm.check_own_subnet_for_open_port(50000)
-        #print(deviceList)
         if deviceList:
             global deviceListObj
             deviceListObj = nm.discover_device_name(deviceList)
             print(deviceListObj)
-            self.gui["deviceScan"] = json.dumps(deviceListObj)
-            self.gui.show_page("listdevices.qml", override_idle=True)
-        deviceServerT.terminate()
-            #self.selectClient()
+
 
     # Start Voice Server
     def deviceServer(self):
@@ -107,15 +102,19 @@ class IntercomSkill(MycroftSkill):
     
     #Create AudioPlayer
     def createPlayer(self):
-        paudio = pyaudio.PyAudio()
-        global voiceStream
-        voiceStream = paudio.open(format = pyaudio.paInt16,
-                        channels = 1,
-                        rate = 10240,
-                        output = True)
+        try:
+            paudio = pyaudio.PyAudio()
+            global voiceStream
+            voiceStream = paudio.open(format = pyaudio.paInt16,
+                            channels = 1,
+                            rate = 10240,
+                            output = True)
+        except:
+            LOGGER.info("Could Not Create Audio Player")
 
     # Start Voice Server
     def voiceServer(self):
+        LOGGER.info("In Voice Server")
         currentPath = dirname(__file__)
         sys.path.append(currentPath) 
         import nmscanner as nm
@@ -146,12 +145,17 @@ class IntercomSkill(MycroftSkill):
         conn.close()
 
     def streamAudio(self, data):
+        self.gui["deviceScan"] = json.dumps(deviceListObj)
+        self.gui["pageState"] = "Listen"
+        self.gui.show_page("intercomLoader.qml", override_idle=True)
+        
         global voiceStream
         if data:
             voiceStream.write(data)
         
     # Connect Voice Client
-    def connectVoiceClient(self):
+    def connectVoiceClient(self, message):
+        global deviceListObj
         LOGGER.info ("In vConnect")
         clientAddr = "192.168.1.119"
         LOGGER.info(clientAddr)
@@ -176,8 +180,17 @@ class IntercomSkill(MycroftSkill):
         voiceSoc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         voiceSoc.connect((host,port))
         LOGGER.info("In vConnect Complete")
-  
+        self.gui["deviceScan"] = json.dumps(deviceListObj)
+        self.gui["pageState"] = "Speak"
+        self.gui.show_page("intercomLoader.qml", override_idle=True)
+        self.speakStart()
+        
     def disconnectVoiceClient(self):
+        global mute
+        mute = True
+        self.gui["deviceScan"] = json.dumps(deviceListObj)
+        self.gui["pageState"] = "Scan"
+        self.gui.show_page("intercomLoader.qml", override_idle=True)
         LOGGER.info("In vDisconnect Start")
         global voiceSoc
         voiceSoc.close()
