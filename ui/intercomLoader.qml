@@ -6,7 +6,8 @@ import Mycroft 1.0 as Mycroft
 
 Mycroft.Delegate {
     id: intercomLoaderView
-
+    skillBackgroundSource: "https://source.unsplash.com/1920x1080/?+music" 
+    
     property var pageToLoad: sessionData.pageState
     property var devicesList: JSON.parse(sessionData.deviceScan)
     property var intercomStatus: sessionData.intercomStatus

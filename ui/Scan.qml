@@ -17,6 +17,26 @@ PlasmaCore.ColorScope {
             margins: Kirigami.Units.largeSpacing
         }
 
+        Kirigami.Heading {
+                id: scanPgTextHeading
+                level: 1
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                font.bold: true
+                text: i18n("Nearby Devices")
+                color: Kirigami.Theme.highlightColor
+        }
+        
+        Item {
+            Layout.preferredHeight: Kirigami.Units.largeSpacing
+        }
+        
+        Kirigami.Separator {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 1
+        }
+        
         Kirigami.ScrollablePage {
             id: page
             supportsRefreshing: true
@@ -35,7 +55,7 @@ PlasmaCore.ColorScope {
                 interval: 3000
                 onTriggered: page.refreshing = false
             }
-
+            
             ListView {
                 id: networkView
                 model: intercomLoaderView.devicesList.Devices
