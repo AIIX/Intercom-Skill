@@ -143,6 +143,8 @@ class IntercomSkill(MycroftSkill):
                 break
         
         conn.close()
+        LOGGER.info("HERE D1")
+        self.bus.emit(Message("recognizer_loop:sleep"))
 
     def streamAudio(self, data):
         self.gui["deviceScan"] = json.dumps(deviceListObj)
@@ -193,6 +195,7 @@ class IntercomSkill(MycroftSkill):
         self.gui.show_page("intercomLoader.qml", override_idle=True)
         LOGGER.info("In vDisconnect Start")
         global voiceSoc
+        voiceSoc.send("End".encode("utf-8"))
         voiceSoc.close()
         LOGGER.info("In vDisconnect Completed")
     
